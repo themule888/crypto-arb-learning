@@ -1,0 +1,5 @@
+{
+  "coins_to_check": ["Bitcoin", "Ethereum", "Solana", "Cardano"],
+  "exchanges": ["Uniswap", "Sushiswap"],
+  "min_profit_threshold": 50
+}
