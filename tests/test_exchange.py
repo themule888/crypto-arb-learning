@@ -1,4 +1,4 @@
-from exchange import Exchange
+from src.exchange import Exchange
 
 def test_exchange_creation():
     uniswap = Exchange("Uniswap")

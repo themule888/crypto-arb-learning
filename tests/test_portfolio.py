@@ -1,5 +1,5 @@
-from coin import Coin
-from portfolio import Portfolio
+from src.coin import Coin
+from src.portfolio import Portfolio
 
 def test_portfolio_creation():
     portfolio = Portfolio()

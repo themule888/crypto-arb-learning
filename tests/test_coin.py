@@ -1,4 +1,4 @@
-from coin import Coin
+from src.coin import Coin
 
 def test_coin_creation():
     bitcoin = Coin("Bitcoin", 0.5, 50000)
