@@ -13,15 +13,11 @@ class Portfolio:
             total = total + coin.calculate_value()
         return total
         
-
-
 my_portfolio = Portfolio()
-
 
 bitcoin = Coin('Bitcoin', 0.5, 50000)
 ethereum = Coin('Ethereum', 2.0, 3000)
 solana = Coin('Solana', 10.0, 100)
-
 
 my_portfolio.add_coin(bitcoin)
 my_portfolio.add_coin(ethereum)

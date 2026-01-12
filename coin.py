@@ -6,6 +6,5 @@ class Coin:
     
     def calculate_value(self):
         return self.amount * self.price
+    
 
-bitcoin = Coin("Bitcoin", 0.5, 50000)
-ethereum = Coin("Ethereum", 2.0, 3000)
