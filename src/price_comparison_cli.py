@@ -31,7 +31,6 @@ def get_coincap_price(coin):
     return None
 
 def main():
-    # Set up command-line argument parser
     parser = argparse.ArgumentParser(description='Compare crypto prices across exchanges')
     parser.add_argument('--coin', type=str, default='bitcoin', help='Coin to track (default: bitcoin)')
     parser.add_argument('--threshold', type=float, default=0.5, help='Alert threshold percent (default: 0.5)')
