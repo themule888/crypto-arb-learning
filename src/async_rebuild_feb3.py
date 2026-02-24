@@ -315,7 +315,7 @@ async def compare_http_websocket():
     while True:
         try:
             # Fetch HTTP Prices
-            params = {'ids': 'bitcoin, ethereum', 'vs_currencies': 'usd'}
+            params = {'ids': 'bitcoin,ethereum', 'vs_currencies': 'usd'}
 
             async with session.get('https://api.coingecko.com/api/v3/simple/price', params=params) as response:
                 if response.status == 200:
