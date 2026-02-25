@@ -94,8 +94,10 @@ def get_price(pool_address, token_a, token_b):
             reserve_a = reserves[1] / 10**dec_a
             reserve_b = reserves[0] / 10**dec_b
         
-        # Price = how much token_B you get per token_a
-        return reserve_b / reserve_a
+        # Price = how much token_b you get per token_a
+        price = reserve_b / reserve_a
+        tvl = reserve_b * 2 # Both sides equal value, so double one side
+        return {'price': price, 'tvl': tvl}
     
     except Exception as e:
         print(f'  ❌ Error reading {pool_address[:10]} ...: {e}')
@@ -113,10 +115,15 @@ def scan_pair(pair_name, dex_pools):
     # Fetch price from each DEX
     prices = {}
     for dex_name, pool_address in dex_pools.items():
-        price = get_price(pool_address, token_a, token_b)
-        if price is not None:
+        result = get_price(pool_address, token_a, token_b)
+        if result is not None:
+            tvl = result['tvl']
+            price = result['price']
+            if tvl < 100: # Skip pools with less thank $100k TVL
+                print(f'  {dex_name:12} ⚠️ TVL too low (${tvl:,.0f} {token_b})')
+                continue
             prices[dex_name] = price
-            print(f'  {dex_name:12} {price:.6f} {token_b} per {token_a}')
+            print(f'  {dex_name:12} {price:.6f} {token_b} per {token_a} (TVL: {tvl:,.0f} {token_b})')
     
     # Need at least 2 DEXs to find a spread
     if len(prices) < 2:
