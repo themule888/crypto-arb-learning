@@ -55,8 +55,66 @@ v3_pool_abi = [
         'outputs': [{'name': '', 'type': 'uint24'}],
         'stateMutability': 'view',
         'type': 'function'
+    },
+
+    {
+        'inputs': [{'name': '', 'type': 'int24'}],
+        'name': 'ticks',
+        'outputs': [
+            {'name': 'liquidityGross', 'type': 'uint128'},
+            {'name': 'liquidityNet', 'type': 'int128'},
+            {'name': 'feeGrowthOutside0X128', 'type': 'uint256'},
+            {'name': 'feeGrowthOutside1X128', 'type': 'uint256'},
+            {'name': 'tickCumulativeOutside', 'type': 'int56'},
+            {'name': 'secondsPerLiquidityOutsideX128', 'type': 'uint160'},
+            {'name': 'secondsOutside', 'type': 'uint32'},
+            {'name': 'initialized', 'type': 'bool'}
+        ],
+        'stateMutability': 'view',
+        'type': 'function'
     }
+
 ]
+
+def read_nearby_ticks(pool_address, current_tick, fee, num_ticks=5):
+    """
+    Read liquidityNet at nearby tick boundaries.
+    Shows where liquidity cliffs are - above and below current price.
+    """
+    contract = web3.eth.contract(address=pool_address, abi=v3_pool_abi)
+    spacing = get_tick_spacing(fee)
+
+    # Find the nearest initialized tick below current price
+    # Floor division to find neearest lower tick boundary
+    base_tick = (current_tick // spacing) * spacing
+
+    print(f'\n  📍 Current tick: {current_tick}')
+    print(f'  📍 Nearest boundary below: {base_tick}')
+    print(f'  📍 Tick spacing: {spacing}')
+    print(f'\n  {"Tick":>8} {"LiquidityNet":>20} {"Direction":>12} {"Initialized":>12}')
+    print(f'  {"-" * 55}')
+
+    # Check ticks below and above current price
+    for i in range(-num_ticks, num_ticks + 1):
+        tick = base_tick + (i * spacing)
+
+        # Query the contract for this tick's data
+        tick_data = contract.functions.ticks(tick).call()
+        liquidity_net = tick_data[1]
+        intitialized = tick_data[7]
+
+        # Only show ticks that have LP positions
+        if intitialized:
+            if liquidity_net > 0:
+                direction = '🟢 ADD'
+            elif liquidity_net <0:
+                direction = '🔴 REMOVE'
+            else:
+                direction = '⚪️ ZERO'
+
+            marker = '◀ CURRENT'if tick == base_tick else ''
+            print(f'  {tick:>8} {liquidity_net:>20,} {direction:>12}{marker}')
+            
 
 # ========== V3 POOLS ==========
 # ETH/USDC on Uniswap V3 (two fee tiers)
@@ -198,7 +256,7 @@ def main():
             print(f'    {"":12}: tick: {result["tick"]} fee: {result["fee"]}%')
             print(f'    {"":12} liquidity: {result["liquidity"]:,}')
             all_prices[pool_name] = result['eth_price']
-            
+
         else:
             print(f'   {result["pool"]:12} ❌ {result["error"][:40]}')
 
@@ -215,6 +273,18 @@ def main():
             all_prices[pool_name] = result['eth_price']
         else:
             print(f'  {result["pool"]:12} ❌ {result["error"][:40]}')
+
+    # Read tick data for V3 pools
+    print(f'\n🔍 TICK ANALYSI (Liqiudity Cliffs):')
+    print(f'=' * 60)
+
+    for pool_name, pool_address in V3_POOLS.items():
+        result = read_v3_pool(pool_name, pool_address)
+
+        if result['success']:
+            print(f'\n  {pool_name}:')
+            fee_raw = int(result['fee'] * 10000)
+            read_nearby_ticks(pool_address, result['tick'], fee_raw)
 
         # Find Spreads
     if len(all_prices) >=2:
@@ -256,6 +326,18 @@ def main():
                 pair_spread = abs(price_a - price_b)
                 pair_pct = (pair_spread / min(price_a, price_b)) * 100
                 print(f'   {name_a} vs {name_b}: ${pair_spread:.2f} ({pair_pct:.4f}%)')
+
+def get_tick_spacing(fee):
+    """
+    Each fee tier has a fixed tick spacing.
+    Liquidity can only change at ticks divisible by the spacing.
+    """
+    spacing = {
+        500:10,         # 0.05% fee = ticks every 10
+        3000:60,        # 0.3% fee = ticks every 60
+        10000: 200,     # 1% fee = ticks every 200
+    }
+    return spacing.get(fee,10)
 
 main()
 
