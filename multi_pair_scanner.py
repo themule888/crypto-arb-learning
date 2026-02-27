@@ -119,7 +119,7 @@ def scan_pair(pair_name, dex_pools):
         if result is not None:
             tvl = result['tvl']
             price = result['price']
-            if tvl < 100: # Skip pools with less thank $100k TVL
+            if tvl < 10000: # Skip pools with less thank $100k TVL
                 print(f'  {dex_name:12} ⚠️ TVL too low (${tvl:,.0f} {token_b})')
                 continue
             prices[dex_name] = price

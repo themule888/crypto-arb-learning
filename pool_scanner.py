@@ -45,7 +45,7 @@ def get_pool_price(pool_name, pool_address, usdc_is_token0):
         # Get reserves
         reserves = contract.functions.getReserves().call()
 
-        # Assign reserves correctly absed on token order
+        # Assign reserves correctly based on token order
         if usdc_is_token0:
             usdc_reserves = reserves[0] / 10**6
             weth_reserves = reserves[1] / 10**18
