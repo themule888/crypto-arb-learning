@@ -78,6 +78,8 @@ POOLS = {
     'SushiSwap':  ('0x397FF1542f962076d0BFE58eA045FfA2d347ACa0', 'v2'),
 }
 
+POOL_CACHE = {}
+
 def async_retry(max_retries=3, delay=1):
     def decorator(func):
         async def wrapper(*args, **kwargs):
@@ -107,21 +109,39 @@ def decode_v3_price(sqrtPriceX96, token0_is_usdc):
     
     return eth_price
 
+async def cache_static_data():
+    """Fetch token0 and fee once for all v3 pools - these never change"""
+    usdc_address = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+
+    for pool_name, pool_data in POOLS.items():
+        if pool_data[1] == 'v3':
+            contract = web3.eth.contract(address=pool_data[0], abi=v3_pool_abi)
+            token0 = await contract.functions.token0().call()
+
+            POOL_CACHE[pool_name] = {
+                'token0_is_usdc': token0.lower() == usdc_address.lower(),
+            }
+            print(f'  ✅ Cahced {pool_name}')
+    print()
+
+
 @async_retry(max_retries=3, delay=1)
 async def read_pool(pool_name, pool_address, version):
-    """Read ETH price from any pool - async version"""
+    """Read ETH price - optimized with cache and parallel calls"""
     if version == 'v3':
         contract = web3.eth.contract(address=pool_address, abi=v3_pool_abi)
 
-        slot0 = await contract.functions.slot0().call()
+        # Fetch slot0 and liquiditiy SIMULTANEOUSLY
+        slot0, liquidity = await asyncio.gather(
+            contract.functions.slot0().call(),
+            contract.functions.liquidity().call()
+        )
+
         sqrtPriceX96 = slot0[0]
         tick = slot0[1]
-        liquidity = await contract.functions.liquidity().call()
 
-        token0 = await contract.functions.token0().call()
-        usdc_address = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
-        token0_is_usdc = token0.lower() == usdc_address.lower()
-
+        # Use cached token0 instead of fetching every time
+        token0_is_usdc = POOL_CACHE[pool_name]['token0_is_usdc']
         eth_price = decode_v3_price(sqrtPriceX96, token0_is_usdc)
 
         return {
@@ -227,6 +247,9 @@ async def main():
     print(f'  Scan every: {SCAN_INTERVAL}s')
     print(f'  Pools: {len(POOLS)}')
     print('=' * 60)
+
+    await cache_static_data()
+
 
     scan_count = 0
 
